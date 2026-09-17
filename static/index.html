@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mission Control</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1020; --panel: #121a30; --panel2: #18223d; --line: #26304f; --ink: #e6ebf7; --muted: #8b95b3;
+    --green: #3ddc97; --amber: #ffc857; --red: #ff6b6b; --blue: #6ea8fe; --violet: #b18cff;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1200px 600px at 20% -10%, #1a2550 0%, var(--bg) 55%); color: var(--ink); font-family: var(--sans); min-height: 100vh; }
+  header { display: flex; align-items: baseline; gap: 18px; padding: 22px 28px 10px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: .02em; }
+  header .sub { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  header .clock { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  main { display: grid; grid-template-columns: 1.1fr 1.2fr 1.3fr; gap: 18px; padding: 18px 28px 40px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; height: 560px; display: flex; flex-direction: column; min-height: 0; }
+  .panel > div:not(.log) { min-height: 0; }
+  #tasks { overflow: auto; flex: 1; }
+  .panel h2 { margin: 0 0 12px; font-size: 12px; font-family: var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .panel h2 .count { color: var(--ink); background: var(--panel2); border-radius: 999px; padding: 1px 9px; font-size: 11px; }
+  /* tasks */
+  .task { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; display: grid; grid-template-columns: 14px 1fr auto; gap: 8px 12px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(61,220,151,.15); }
+  .dot.gone { background: var(--red); box-shadow: 0 0 0 4px rgba(255,107,107,.15); }
+  .task .name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .kind { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .kind.web { color: var(--blue); border-color: rgba(110,168,254,.4); } .kind.worker { color: var(--amber); border-color: rgba(255,200,87,.4); } .kind.ticker { color: var(--violet); border-color: rgba(177,140,255,.4); }
+  .task .note { grid-column: 2 / -1; font-size: 13px; color: var(--muted); }
+  .state { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .state.idle { background: rgba(139,149,179,.2); color: var(--muted); } .state.busy { background: rgba(255,200,87,.25); color: var(--amber); } .state.serving { background: rgba(110,168,254,.2); color: var(--blue); }
+  .summary { display: flex; gap: 8px; margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .summary span { padding: 1px 8px; border-radius: 999px; background: var(--panel2); }
+  .summary .queued { color: var(--ink); } .summary .running { color: var(--amber); } .summary .done { color: var(--green); } .summary .failed { color: var(--red); }
+  .task .meta { grid-column: 2 / -1; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+  /* jobs */
+  form.job { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; margin-bottom: 14px; }
+  select, input, textarea, button { font: inherit; }
+  select, input[type=text] { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 13px; }
+  button { background: var(--blue); color: #0b1020; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  .jobs { overflow: auto; flex: 1; }
+  .job { border-top: 1px solid var(--line); padding: 10px 2px; font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+  .job .id { font-family: var(--mono); color: var(--muted); }
+  .status { font-family: var(--mono); font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+  .status.queued { background: rgba(139,149,179,.2); } .status.running { background: rgba(255,200,87,.2); color: var(--amber); } .status.done { background: rgba(61,220,151,.2); color: var(--green); } .status.failed { background: rgba(255,107,107,.2); color: var(--red); }
+  .job .in { grid-column: 1 / -1; font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .job .out { grid-column: 1 / -1; font-size: 13px; }
+  .job .who { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  /* chat */
+  .log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px 4px 2px; margin-bottom: 12px; }
+  .msg { max-width: 92%; padding: 10px 12px; border-radius: 10px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: rgba(110,168,254,.18); }
+  .msg.bot { align-self: flex-start; background: var(--panel2); border: 1px solid var(--line); }
+  .msg.tool { align-self: flex-start; font-family: var(--mono); font-size: 11px; color: var(--violet); padding: 2px 0; }
+  .msg.err { align-self: flex-start; color: var(--red); font-family: var(--mono); font-size: 12px; }
+  form.chat { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .hint code { font-family: var(--mono); color: var(--ink); }
+  /* how it works */
+  .how { margin: 0 28px 40px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px 6px; }
+  .how summary { cursor: pointer; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); list-style: none; }
+  .how summary::before { content: "▸ "; } .how[open] summary::before { content: "▾ "; }
+  .how .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 14px 0; }
+  @media (max-width: 1100px) { .how .grid { grid-template-columns: 1fr 1fr; } }
+  .how .cell { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.55; }
+  .how .cell b { display: block; font-family: var(--mono); font-size: 12px; margin-bottom: 6px; }
+  .how .cell b.web { color: var(--blue); } .how .cell b.worker { color: var(--amber); } .how .cell b.ticker { color: var(--violet); } .how .cell b.agent { color: var(--green); }
+  .how p { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.55; }
+  .how p code { font-family: var(--mono); color: var(--ink); font-size: 12px; }
+  .how .steps { grid-template-columns: repeat(3, 1fr); }
+  .how .cell code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  .how .cell b { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mission Control</h1>
+  <span class="sub">web · workers · ticker · agent</span>
+  <span class="clock" id="clock"></span>
+</header>
+<main>
+  <section class="panel">
+    <h2>Tasks <span class="count" id="task-count">0</span></h2>
+    <div id="tasks"><div class="empty">Nothing has reported yet.</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Jobs <span class="count" id="job-count">0</span><span class="summary" id="summary"></span></h2>
+    <form class="job" id="job-form">
+      <select name="kind">
+        <option value="count_primes">count_primes</option>
+        <option value="summarise_url">summarise_url</option>
+      </select>
+      <input type="text" name="input" value="1000000" placeholder="a number, or a URL" required>
+      <button type="submit">Submit</button>
+    </form>
+    <div class="jobs" id="jobs"><div class="empty">No jobs yet. Submit one and watch a worker pick it up.</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Agent</h2>
+    <p class="hint">Try: <code>who is running, and how long is the queue?</code> · <code>queue count_primes for 800000</code> · <code>who is Imran Khan the cricketer?</code> · <code>what is the GitHub repo langchain-ai/langgraph about?</code></p>
+    <div class="log" id="log"></div>
+    <form class="chat" id="chat-form">
+      <input type="text" name="message" placeholder="Ask Mission Control…" autocomplete="off" required>
+      <button type="submit">Send</button>
+    </form>
+  </section>
+</main>
+<details class="how" open>
+  <summary>How it works</summary>
+  <div class="grid">
+    <div class="cell"><b class="web">web · app/main.py</b>The only process with memory. It keeps two lists, tasks and jobs, serves this page, and answers a small HTTP API. Everything else is a client of it. Restart it and the lists are gone: that is deliberate at this step.</div>
+    <div class="cell"><b class="worker">worker · app/worker.py</b>A plain Python loop, no port. Every few seconds: send a heartbeat, ask the web process for the next queued job, do it, report the result. Two copies run here; on AWS the number of copies is a setting.</div>
+    <div class="cell"><b class="ticker">ticker · app/ticker.py</b>A scheduled task. It wakes up, counts the jobs, posts a one-line report as its heartbeat, and exits. Here it loops every 30 seconds; on AWS a schedule starts a fresh one every few minutes.</div>
+    <div class="cell"><b class="agent">agent · app/agent.py</b>Runs inside the web process. A LangGraph loop over DeepSeek on OpenRouter: ask the model, run the tool it asks for, give it the result, repeat. Its tools: read the lists above, submit jobs, search Wikipedia, and ask DeepWiki about GitHub repositories over MCP.</div>
+  </div>
+  <p><strong style="color:var(--ink)">How they talk.</strong> Plain HTTP to the web process, nothing else: <code>POST /api/heartbeat</code> "I am here", <code>POST /api/jobs/claim</code> "give me a job", <code>POST /api/jobs/{id}/result</code> "here is the outcome". The queue is a list in the web process handed out first come, first served. No message queue, no database, no Redis, yet.</p>
+  <p><strong style="color:var(--ink)">The agent's tools.</strong> Ours, in <code>app/agent.py</code>: <code>list_tasks</code>, <code>list_jobs</code>, <code>job_status</code>, <code>submit_job</code>, <code>search_wikipedia</code>, <code>wikipedia_summary</code>. From the DeepWiki MCP server: <code>ask_question</code>, <code>read_wiki_structure</code>, <code>read_wiki_contents</code>, which know GitHub repositories, not people.</p>
+  <p><strong style="color:var(--ink)">Try this.</strong> Submit five <code>count_primes</code> jobs and watch both workers turn busy while the rest wait in the queue. Stop one worker and watch its dot turn red while the other keeps going. Ask the agent "how long is the queue?"</p>
+</details>
+<details class="how" open>
+  <summary>Next steps · one commit each</summary>
+  <div class="grid steps">
+    <div class="cell"><b class="agent">1 · the application ← you are here</b>Four processes on one laptop, talking over HTTP to the web process. State in memory. Key in a .env file.</div>
+    <div class="cell"><b>2 · containers</b>One Dockerfile, three entrypoints. <code>docker compose up</code> runs the same four processes as containers. Same image everywhere from now on.</div>
+    <div class="cell"><b>3 · continuous integration</b>GitHub Actions: lint and tests on every push, then build the image and push it to ECR, tagged with the commit.</div>
+    <div class="cell"><b>4 · infrastructure as code</b>A CDK stack: DynamoDB for the state, a secret for the key, an ECS cluster with the web service behind a load balancer, the worker service with autoscaling, and the ticker as a scheduled task.</div>
+    <div class="cell"><b>5 · continuous deployment</b>Merge to main runs <code>cdk deploy</code> with the new image. This page goes live at an HTTPS URL, showing real tasks.</div>
+    <div class="cell"><b>6 · the agent on AgentCore</b>The agent moves out of the web process onto AgentCore Runtime, its tools go behind an AgentCore Gateway, and it gets memory across sessions.</div>
+  </div>
+</details>
+<script>
+const $ = (s) => document.querySelector(s);
+const session = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())).slice(0, 12);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ago = (t) => { const s = Math.max(0, Math.round(Date.now() / 1000 - t)); return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s/60)}m ${s%60}s` : `${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`; };
+
+async function refresh() {
+  const [tasks, jobs, summary] = await Promise.all([fetch("/api/tasks").then(r => r.json()), fetch("/api/jobs").then(r => r.json()), fetch("/api/summary").then(r => r.json())]);
+  $("#summary").innerHTML = ["queued", "running", "done", "failed"].map(k => `<span class="${k}">${summary[k]} ${k}</span>`).join("");
+  $("#task-count").textContent = tasks.filter(t => t.alive).length;
+  $("#tasks").innerHTML = tasks.length ? tasks.map(t => `
+    <div class="task">
+      <span class="dot ${t.alive ? "" : "gone"}"></span>
+      <span class="name">${esc(t.name)}</span>
+      <span><span class="kind ${esc(t.kind)}">${esc(t.kind)}</span>${t.status ? `<span class="state ${esc(t.status)}">${esc(t.status)}${t.job_id ? " · " + esc(t.job_id) : ""}</span>` : ""}</span>
+      <span class="note">${esc(t.note) || "&nbsp;"}</span>
+      <span class="meta">up ${ago(t.started_at)} · seen ${ago(t.last_seen)} ago${t.kind === "worker" ? ` · ${t.jobs_done} jobs done` : ""}</span>
+    </div>`).join("") : '<div class="empty">Nothing has reported yet.</div>';
+  $("#job-count").textContent = jobs.length;
+  $("#jobs").innerHTML = jobs.length ? jobs.map(j => `
+    <div class="job">
+      <span class="id">${esc(j.id)}</span>
+      <span><span class="status ${esc(j.status)}">${esc(j.status)}</span> <span class="who">${esc(j.kind)}${j.worker ? " · " + esc(j.worker) : ""}</span></span>
+      <span class="in">${esc(j.input)}</span>
+      ${j.result ? `<span class="out">${esc(j.result)}</span>` : ""}
+    </div>`).join("") : '<div class="empty">No jobs yet. Submit one and watch a worker pick it up.</div>';
+}
+setInterval(refresh, 3000); refresh();
+setInterval(() => { $("#clock").textContent = new Date().toLocaleTimeString(); }, 1000);
+
+$("#job-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  await fetch("/api/jobs", { method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({ kind: f.get("kind"), input: f.get("input") }) });
+  refresh();
+});
+$("#job-form select").addEventListener("change", (e) => { $("#job-form input").value = e.target.value === "summarise_url" ? "https://en.wikipedia.org/wiki/Load_balancing_(computing)" : "1000000"; });
+
+function add(cls, text) { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; $("#log").appendChild(d); $("#log").scrollTop = 1e9; return d; }
+
+$("#chat-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = e.target.message; const message = input.value.trim(); if (!message) return;
+  input.value = ""; add("user", message);
+  const bot = add("bot", "");
+  const r = await fetch("/api/chat/stream", { method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({ session_id: session, message }) });
+  if (!r.ok) { bot.remove(); add("err", `HTTP ${r.status}: ${await r.text()}`); return; }
+  const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+  while (true) {
+    const { value, done } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i; while ((i = buf.indexOf("\n\n")) >= 0) {
+      const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+      const ev = /^event: (.*)$/m.exec(chunk)?.[1]; const data = JSON.parse(/^data: (.*)$/m.exec(chunk)?.[1] || "{}");
+      if (ev === "token") bot.textContent += data.text;
+      else if (ev === "tool") { const t = add("tool", `↳ used ${data.name}`); $("#log").appendChild(bot); }
+      else if (ev === "error") add("err", data.detail);
+    }
+    $("#log").scrollTop = 1e9;
+  }
+  if (!bot.textContent) bot.remove();
+  refresh();
+});
+</script>
+</body>
+</html>
