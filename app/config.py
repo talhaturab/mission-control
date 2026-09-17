@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         return {name.strip(): url.strip() for name, url in pairs}
 
 
+def task_label(kind: str, task_name: str) -> str:
+    """'worker' + 'abc123' -> 'worker-abc123'; 'worker' + 'worker-1' stays 'worker-1'."""
+    return task_name if task_name.startswith(kind) else f"{kind}-{task_name}"
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

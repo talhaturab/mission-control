@@ -10,7 +10,7 @@ import time
 
 from app import jobs
 from app.agent import create_llm
-from app.config import get_settings
+from app.config import get_settings, task_label
 from app.hub import Hub
 
 log = logging.getLogger("worker")
@@ -19,7 +19,7 @@ log = logging.getLogger("worker")
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     settings = get_settings()
-    hub = Hub(settings.hub_url, name=f"worker-{settings.task_name}", kind="worker")
+    hub = Hub(settings.hub_url, name=task_label("worker", settings.task_name), kind="worker")
     llm = create_llm(settings) if settings.llm_configured else None
     done = 0
     note = "waiting for jobs"

@@ -29,7 +29,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import BaseModel, Field
 
 from app.agent import build_graph, create_llm, hub_tools, mcp_tools, wikipedia_tools
-from app.config import Settings, get_settings
+from app.config import Settings, get_settings, task_label
 from app.state import MemoryState
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
@@ -88,7 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             while True:
                 st = app.state.state
                 st.heartbeat(
-                    f"web-{settings.task_name}",
+                    task_label("web", settings.task_name),
                     "web",
                     note=f"{len(st.jobs)} jobs known",
                     status="serving",

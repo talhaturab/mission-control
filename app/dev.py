@@ -11,10 +11,10 @@ import sys
 PORT = os.environ.get("PORT", "8000")
 
 CMDS = {
-    "local": [sys.executable, "-m", "uvicorn", "app.main:app", "--port", PORT],
-    "local-1": [sys.executable, "-m", "app.worker"],
-    "local-2": [sys.executable, "-m", "app.worker"],
-    "local-t": [sys.executable, "-m", "app.ticker"],
+    "web-local": [sys.executable, "-m", "uvicorn", "app.main:app", "--port", PORT],
+    "worker-local-1": [sys.executable, "-m", "app.worker"],
+    "worker-local-2": [sys.executable, "-m", "app.worker"],
+    "ticker-local": [sys.executable, "-m", "app.ticker"],
 }
 
 procs = []

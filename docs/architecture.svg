@@ -3,30 +3,30 @@
   <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
   <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker></defs>
   <rect width="900" height="430" fill="#ffffff"/>
-  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 1 · everything on one laptop</text>
+  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 2 · the same four processes, as containers</text>
 
   <rect x="20" y="50" width="610" height="360" rx="14" fill="#f6f7fb" stroke="#c7cad6" stroke-dasharray="6 5"/>
-  <text x="36" y="72" fill="#666">YOUR LAPTOP  ·  uv run python -m app.dev</text>
+  <text x="36" y="72" fill="#666">YOUR LAPTOP  ·  docker compose up --scale worker=2  ·  one image, four containers</text>
 
   <rect x="40" y="96" width="150" height="48" rx="8" fill="#fff" stroke="#333"/><text x="115" y="125" text-anchor="middle">browser</text>
-  <path d="M190 120 L238 120" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="214" y="111" text-anchor="middle" fill="#2563eb" font-size="11">:8000</text>
+  <path d="M190 120 L238 120" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="214" y="111" text-anchor="middle" fill="#2563eb" font-size="11">:8010</text>
 
   <rect x="240" y="80" width="230" height="140" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.5"/>
   <text x="355" y="104" text-anchor="middle" font-weight="bold">web  ·  app/main.py</text>
-  <text x="355" y="128" text-anchor="middle" fill="#444" font-size="12">dashboard + API</text>
+  <text x="355" y="128" text-anchor="middle" fill="#444" font-size="12">container · dashboard + API</text>
   <text x="355" y="148" text-anchor="middle" fill="#444" font-size="12">state: tasks, jobs (in memory)</text>
   <text x="355" y="168" text-anchor="middle" fill="#444" font-size="12">agent: LangGraph loop</text>
   <text x="355" y="188" text-anchor="middle" fill="#444" font-size="12">tools: hub · Wikipedia · MCP</text>
 
-  <rect x="40" y="180" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="201" text-anchor="middle" font-weight="bold">worker-1</text><text x="115" y="219" text-anchor="middle" fill="#444" font-size="12">app/worker.py</text>
-  <rect x="40" y="246" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="267" text-anchor="middle" font-weight="bold">worker-2</text><text x="115" y="285" text-anchor="middle" fill="#444" font-size="12">primes · summaries</text>
-  <rect x="40" y="312" width="150" height="50" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.5"/><text x="115" y="333" text-anchor="middle" font-weight="bold">ticker</text><text x="115" y="351" text-anchor="middle" fill="#444" font-size="12">app/ticker.py · 30 s</text>
+  <rect x="40" y="180" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="201" text-anchor="middle" font-weight="bold">worker-1</text><text x="115" y="219" text-anchor="middle" fill="#444" font-size="12">container</text>
+  <rect x="40" y="246" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="267" text-anchor="middle" font-weight="bold">worker-2</text><text x="115" y="285" text-anchor="middle" fill="#444" font-size="12">--scale worker=2</text>
+  <rect x="40" y="312" width="150" height="50" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.5"/><text x="115" y="333" text-anchor="middle" font-weight="bold">ticker</text><text x="115" y="351" text-anchor="middle" fill="#444" font-size="12">container, loops here</text>
 
   <path d="M190 200 L290 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
   <path d="M190 266 L320 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
   <path d="M190 332 L350 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
   <text x="365" y="262" fill="#444" font-size="11">heartbeat · claim job · report result</text>
-  <text x="365" y="278" fill="#444" font-size="11">(the ticker only heartbeats)</text>
+  <text x="365" y="278" fill="#444" font-size="11">to http://web:8000, by service name</text>
 
   <rect x="660" y="50" width="220" height="360" rx="14" fill="#fafafa" stroke="#c7cad6"/>
   <text x="676" y="72" fill="#666">THE INTERNET</text>
@@ -41,5 +41,5 @@
   <path d="M190 280 C 400 310, 560 362, 678 362" stroke="#d97706" stroke-width="1.5" fill="none" marker-end="url(#o)"/>
   <text x="440" y="380" text-anchor="middle" fill="#d97706" font-size="11">summarise_url: fetch the page, then ask the model on OpenRouter</text>
 
-  <text x="20" y="424" fill="#666" font-size="11">key in .env · state lost on restart · four processes, one machine · next step: containers</text>
+  <text x="20" y="424" fill="#666" font-size="11">one Dockerfile, the command picks the process · key still in .env · state still in memory · next: CI builds and pushes the image</text>
 </svg>

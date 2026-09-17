@@ -129,8 +129,8 @@
 <details class="how" open>
   <summary>Next steps · one commit each</summary>
   <div class="grid steps">
-    <div class="cell"><b class="agent">1 · the application ← you are here</b>Four processes on one laptop, talking over HTTP to the web process. State in memory. Key in a .env file.</div>
-    <div class="cell"><b>2 · containers</b>One Dockerfile, three entrypoints. <code>docker compose up</code> runs the same four processes as containers. Same image everywhere from now on.</div>
+    <div class="cell"><b>1 · the application</b>Four processes on one laptop, talking over HTTP to the web process. State in memory. Key in a .env file.</div>
+    <div class="cell"><b class="agent">2 · containers ← you are here</b>One Dockerfile, one image. <code>docker compose up</code> runs the same four processes as containers. Same image everywhere from now on.</div>
     <div class="cell"><b>3 · continuous integration</b>GitHub Actions: lint and tests on every push, then build the image and push it to ECR, tagged with the commit.</div>
     <div class="cell"><b>4 · infrastructure as code</b>A CDK stack: DynamoDB for the state, a secret for the key, an ECS cluster with the web service behind a load balancer, the worker service with autoscaling, and the ticker as a scheduled task.</div>
     <div class="cell"><b>5 · continuous deployment</b>Merge to main runs <code>cdk deploy</code> with the new image. This page goes live at an HTTPS URL, showing real tasks.</div>

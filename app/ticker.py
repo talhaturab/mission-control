@@ -13,7 +13,7 @@ import time
 
 import httpx
 
-from app.config import get_settings
+from app.config import get_settings, task_label
 from app.hub import Hub
 
 log = logging.getLogger("ticker")
@@ -24,9 +24,8 @@ def tick(hub: Hub, hub_url: str) -> str:
     by_status: dict[str, int] = {}
     for job in jobs:
         by_status[job["status"]] = by_status.get(job["status"], 0) + 1
-    report = (
-        "jobs: " + ", ".join(f"{k}={v}" for k, v in sorted(by_status.items())) or "jobs: none yet"
-    )
+    counts = ", ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
+    report = f"jobs: {counts or 'none yet'}"
     hub.heartbeat(note=f"tick at {time.strftime('%H:%M:%S')} · {report}")
     return report
 
@@ -34,7 +33,7 @@ def tick(hub: Hub, hub_url: str) -> str:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     settings = get_settings()
-    hub = Hub(settings.hub_url, name=f"ticker-{settings.task_name}", kind="ticker")
+    hub = Hub(settings.hub_url, name=task_label("ticker", settings.task_name), kind="ticker")
     while True:
         try:
             log.info(tick(hub, settings.hub_url))

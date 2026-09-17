@@ -28,6 +28,16 @@ If port 8000 is busy: `PORT=8010 uv run python -m app.dev`.
 
 Or run the processes one per terminal: `make web`, `make worker`, `make ticker`.
 
+## Run it in containers (step 2)
+
+```bash
+docker compose up --build --scale worker=2     # or: make up
+```
+
+One image, built from the `Dockerfile`, runs all four processes; the `command` in
+`docker-compose.yml` decides which one each container is. The dashboard is on http://localhost:8010.
+Workers reach the web process as `http://web:8000`, by service name, instead of `localhost`.
+
 ## Layout
 
 ```
@@ -39,5 +49,7 @@ app/ticker.py   the scheduled task
 app/jobs.py     what a worker can do: count_primes, summarise_url
 app/hub.py      how workers talk to the web process
 static/         the dashboard
+Dockerfile      one image for every process
+docker-compose.yml  the four processes as containers, for a laptop
 tests/          run with: make test
 ```
