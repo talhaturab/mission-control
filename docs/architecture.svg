@@ -1,55 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="13">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="13">
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
   <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
   <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker>
   <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker></defs>
-  <rect width="900" height="520" fill="#ffffff"/>
-  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 3 · every push is tested, every merge builds the image</text>
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 4 · the same four processes, on AWS, from one CDK stack</text>
 
-  <rect x="20" y="50" width="610" height="360" rx="14" fill="#f6f7fb" stroke="#c7cad6" stroke-dasharray="6 5"/>
-  <text x="36" y="72" fill="#666">YOUR LAPTOP  ·  docker compose up --scale worker=2  ·  one image, four containers</text>
+  <!-- laptop -->
+  <rect x="20" y="50" width="170" height="150" rx="12" fill="#f6f7fb" stroke="#c7cad6" stroke-dasharray="6 5"/>
+  <text x="36" y="72" fill="#666">YOUR LAPTOP</text>
+  <rect x="36" y="86" width="138" height="44" rx="8" fill="#fff" stroke="#333"/><text x="105" y="105" text-anchor="middle" font-weight="bold">cdk deploy</text><text x="105" y="122" text-anchor="middle" fill="#444" font-size="11">infra/stacks/…</text>
+  <text x="105" y="152" text-anchor="middle" fill="#444" font-size="11">builds the image,</text><text x="105" y="167" text-anchor="middle" fill="#444" font-size="11">pushes it to ECR,</text><text x="105" y="182" text-anchor="middle" fill="#444" font-size="11">hands AWS the template</text>
 
-  <rect x="40" y="96" width="150" height="48" rx="8" fill="#fff" stroke="#333"/><text x="115" y="125" text-anchor="middle">browser</text>
-  <path d="M190 120 L238 120" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="214" y="111" text-anchor="middle" fill="#2563eb" font-size="11">:8010</text>
+  <rect x="36" y="224" width="138" height="44" rx="8" fill="#fff" stroke="#333"/><text x="105" y="251" text-anchor="middle">browser</text>
+  <path d="M174 246 L228 246 L228 222 L244 222" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#b)"/><text x="105" y="286" text-anchor="middle" fill="#2563eb" font-size="11">https, to the load balancer</text>
 
-  <rect x="240" y="80" width="230" height="140" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="355" y="104" text-anchor="middle" font-weight="bold">web  ·  app/main.py</text>
-  <text x="355" y="128" text-anchor="middle" fill="#444" font-size="12">container · dashboard + API</text>
-  <text x="355" y="148" text-anchor="middle" fill="#444" font-size="12">state: tasks, jobs (in memory)</text>
-  <text x="355" y="168" text-anchor="middle" fill="#444" font-size="12">agent: LangGraph loop</text>
-  <text x="355" y="188" text-anchor="middle" fill="#444" font-size="12">tools: hub · Wikipedia · MCP</text>
+  <!-- AWS -->
+  <rect x="210" y="50" width="670" height="450" rx="14" fill="#fff8f0" stroke="#f59e0b" stroke-dasharray="6 5"/>
+  <text x="226" y="72" fill="#92400e">AWS · LONDON · ECS CLUSTER "mission-control" · all of it created by the stack</text>
+  <path d="M190 108 L222 108" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 
-  <rect x="40" y="180" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="201" text-anchor="middle" font-weight="bold">worker-1</text><text x="115" y="219" text-anchor="middle" fill="#444" font-size="12">container</text>
-  <rect x="40" y="246" width="150" height="50" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/><text x="115" y="267" text-anchor="middle" font-weight="bold">worker-2</text><text x="115" y="285" text-anchor="middle" fill="#444" font-size="12">--scale worker=2</text>
-  <rect x="40" y="312" width="150" height="50" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.5"/><text x="115" y="333" text-anchor="middle" font-weight="bold">ticker</text><text x="115" y="351" text-anchor="middle" fill="#444" font-size="12">container, loops here</text>
+  <!-- ECR + secret -->
+  <rect x="230" y="90" width="150" height="46" rx="8" fill="#fff" stroke="#333"/><text x="305" y="110" text-anchor="middle" font-weight="bold">ECR</text><text x="305" y="128" text-anchor="middle" fill="#444" font-size="11">the image, amd64</text>
+  <rect x="400" y="90" width="170" height="46" rx="8" fill="#fff" stroke="#333"/><text x="485" y="110" text-anchor="middle" font-weight="bold">Secrets Manager</text><text x="485" y="128" text-anchor="middle" fill="#444" font-size="11">mission-control/openrouter</text>
+  <text x="600" y="106" fill="#444" font-size="11">tasks pull the image and read</text><text x="600" y="122" fill="#444" font-size="11">the key at start, by IAM role</text>
 
-  <path d="M190 200 L290 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
-  <path d="M190 266 L320 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
-  <path d="M190 332 L350 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
-  <text x="365" y="262" fill="#444" font-size="11">heartbeat · claim job · report result</text>
-  <text x="365" y="278" fill="#444" font-size="11">to http://web:8000, by service name</text>
+  <!-- web express -->
+  <rect x="230" y="160" width="340" height="150" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="400" y="182" text-anchor="middle" font-weight="bold">web · ECS Express service</text>
+  <rect x="246" y="196" width="140" height="44" rx="6" fill="#fff" stroke="#2563eb"/><text x="316" y="214" text-anchor="middle" font-size="12">load balancer</text><text x="316" y="230" text-anchor="middle" fill="#444" font-size="11">HTTPS · …on.aws</text>
+  <rect x="404" y="196" width="150" height="44" rx="6" fill="#fff" stroke="#2563eb"/><text x="479" y="214" text-anchor="middle" font-size="12">Fargate task</text><text x="479" y="230" text-anchor="middle" fill="#444" font-size="10">dashboard · API · agent</text>
+  <path d="M386 218 L402 218" stroke="#2563eb" stroke-width="1.5" marker-end="url(#b)"/>
+  <text x="400" y="266" text-anchor="middle" fill="#444" font-size="11">state: still in memory, in this one task</text>
+  <text x="400" y="284" text-anchor="middle" fill="#444" font-size="11">scaling: 1 to 2 tasks · health check GET /health</text>
 
-  <rect x="660" y="50" width="220" height="360" rx="14" fill="#fafafa" stroke="#c7cad6"/>
-  <text x="676" y="72" fill="#666">THE INTERNET</text>
-  <rect x="680" y="96" width="180" height="60" rx="10" fill="#fff" stroke="#333"/><text x="770" y="120" text-anchor="middle" font-weight="bold">OpenRouter</text><text x="770" y="140" text-anchor="middle" fill="#444" font-size="12">deepseek-v4.1-flash</text>
-  <rect x="680" y="186" width="180" height="60" rx="10" fill="#fff" stroke="#333"/><text x="770" y="210" text-anchor="middle" font-weight="bold">DeepWiki MCP</text><text x="770" y="230" text-anchor="middle" fill="#444" font-size="12">tools over HTTP</text>
-  <rect x="680" y="266" width="180" height="50" rx="10" fill="#fff" stroke="#333"/><text x="770" y="287" text-anchor="middle" font-weight="bold">Wikipedia API</text><text x="770" y="305" text-anchor="middle" fill="#444" font-size="12">search · summary</text>
-  <rect x="680" y="336" width="180" height="50" rx="10" fill="#fff" stroke="#333"/><text x="770" y="357" text-anchor="middle" font-weight="bold">web pages</text><text x="770" y="375" text-anchor="middle" fill="#444" font-size="12">fetched by a worker</text>
+  <!-- workers -->
+  <rect x="230" y="330" width="340" height="150" rx="10" fill="#fff7e6" stroke="#d97706" stroke-width="1.5"/>
+  <text x="400" y="352" text-anchor="middle" font-weight="bold">worker · ECS service on Fargate</text>
+  <rect x="246" y="366" width="90" height="40" rx="6" fill="#fff" stroke="#d97706"/><text x="291" y="390" text-anchor="middle" font-size="12">task</text>
+  <rect x="346" y="366" width="90" height="40" rx="6" fill="#fff" stroke="#d97706"/><text x="391" y="390" text-anchor="middle" font-size="12">task</text>
+  <rect x="446" y="366" width="90" height="40" rx="6" fill="#fff" stroke="#d97706" stroke-dasharray="4 3"/><text x="491" y="390" text-anchor="middle" font-size="12" fill="#888">task</text>
+  <text x="400" y="430" text-anchor="middle" fill="#444" font-size="11">desired 2 · autoscaling: CPU near 50%, 1 to 4 tasks</text>
+  <text x="400" y="448" text-anchor="middle" fill="#444" font-size="11">heartbeat, claim, do, report → the web URL</text>
+  <path d="M400 330 L400 312" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 
-  <path d="M470 120 L678 122" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="574" y="112" text-anchor="middle" fill="#2563eb" font-size="11">agent: chat, tool calls</text>
-  <path d="M470 170 L678 210" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="580" y="178" text-anchor="middle" fill="#2563eb" font-size="11">agent: MCP tools</text>
-  <path d="M470 200 L678 288" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/><text x="600" y="238" text-anchor="middle" fill="#2563eb" font-size="11">agent: Wikipedia tools</text>
-  <path d="M190 280 C 400 310, 560 362, 678 362" stroke="#d97706" stroke-width="1.5" fill="none" marker-end="url(#o)"/>
-  <text x="440" y="380" text-anchor="middle" fill="#d97706" font-size="11">summarise_url: fetch the page, then ask the model on OpenRouter</text>
+  <!-- ticker -->
+  <rect x="600" y="160" width="260" height="110" rx="10" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="730" y="182" text-anchor="middle" font-weight="bold">ticker · scheduled task</text>
+  <rect x="616" y="196" width="110" height="36" rx="6" fill="#fff" stroke="#7c3aed"/><text x="671" y="218" text-anchor="middle" font-size="11">EventBridge rule</text>
+  <rect x="740" y="196" width="104" height="36" rx="6" fill="#fff" stroke="#7c3aed"/><text x="792" y="218" text-anchor="middle" font-size="11">Fargate task</text>
+  <path d="M726 214 L738 214" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="730" y="256" text-anchor="middle" fill="#444" font-size="11">every 5 min: start, report, exit</text>
+  <path d="M600 230 L572 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 
-  <rect x="20" y="425" width="860" height="60" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-dasharray="6 5"/>
-  <text x="36" y="446" fill="#15803d" font-size="12" font-weight="bold">GITHUB ACTIONS  ·  .github/workflows/ci.yml</text>
-  <rect x="40" y="454" width="120" height="24" rx="6" fill="#fff" stroke="#16a34a"/><text x="100" y="470" text-anchor="middle" font-size="11">git push</text>
-  <path d="M160 466 L198 466" stroke="#16a34a" stroke-width="1.5" marker-end="url(#g)"/>
-  <rect x="200" y="454" width="130" height="24" rx="6" fill="#fff" stroke="#16a34a"/><text x="265" y="470" text-anchor="middle" font-size="11">ruff + pytest</text>
-  <path d="M330 466 L368 466" stroke="#16a34a" stroke-width="1.5" marker-end="url(#g)"/><text x="349" y="458" text-anchor="middle" fill="#15803d" font-size="9">main only</text>
-  <rect x="370" y="454" width="150" height="24" rx="6" fill="#fff" stroke="#16a34a"/><text x="445" y="470" text-anchor="middle" font-size="11">docker build amd64</text>
-  <path d="M520 466 L558 466" stroke="#16a34a" stroke-width="1.5" marker-end="url(#g)"/>
-  <rect x="560" y="454" width="300" height="24" rx="6" fill="#dcfce7" stroke="#16a34a"/><text x="710" y="470" text-anchor="middle" font-size="11">ghcr.io/talhaturab/mission-control:&lt;commit&gt;</text>
-  <text x="20" y="510" fill="#666" font-size="11">every commit has an image with its name on it · key still in .env · state still in memory · next: infrastructure as code</text>
+  <!-- internet -->
+  <rect x="600" y="300" width="260" height="180" rx="10" fill="#fafafa" stroke="#c7cad6"/>
+  <text x="616" y="322" fill="#666">THE INTERNET</text>
+  <rect x="616" y="336" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="358" text-anchor="middle" font-size="11">OpenRouter · deepseek-v4.1-flash</text>
+  <rect x="616" y="382" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="404" text-anchor="middle" font-size="12">DeepWiki MCP · Wikipedia API</text>
+  <rect x="616" y="428" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="450" text-anchor="middle" font-size="12">web pages a worker fetches</text>
+  <path d="M570 240 C 590 290, 590 330, 614 350" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#b)"/>
+  <path d="M570 400 L614 400" stroke="#d97706" stroke-width="1.5" marker-end="url(#o)"/>
+
+  <text x="20" y="526" fill="#666" font-size="11">no server to log in to · public subnets, no NAT · tasks have public IPs for outbound calls · key never in git</text>
+  <text x="20" y="544" fill="#666" font-size="11">deployed by hand from a laptop · next: the pipeline pushes to ECR and runs cdk deploy on every merge</text>
 </svg>

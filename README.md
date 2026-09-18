@@ -4,7 +4,7 @@ A small application with four kinds of process, built to be deployed step by ste
 
 | Process | What it does | How it runs on AWS |
 |---|---|---|
-| `web` | Serves the dashboard, holds the state, runs the agent | ECS service behind a load balancer |
+| `web` | Serves the dashboard, holds the state, runs the agent | ECS Express service: Fargate behind a load balancer |
 | `worker` | Asks the web process for jobs and does them | ECS service, several copies, autoscaled |
 | `ticker` | Wakes up, posts a one-line report, exits | Scheduled ECS task |
 | the agent | A LangGraph loop over DeepSeek with hub tools and MCP tools | Inside `web`, later on AgentCore |
@@ -49,6 +49,26 @@ workflow logs in with the token GitHub gives every run.
 docker pull ghcr.io/talhaturab/mission-control:latest    # the image CI built
 ```
 
+## Infrastructure as code (step 4)
+
+`infra/` is a CDK app with one stack. It creates a small network, an ECS cluster, the web
+process as an ECS Express service (Fargate behind a load balancer with an HTTPS URL), the
+worker as a Fargate service with two tasks and a CPU autoscaling policy, and the ticker as a
+scheduled Fargate task every five minutes. CDK builds the image from this repository and
+pushes it to ECR itself.
+
+```bash
+aws sso login --profile talhasandbox
+aws secretsmanager create-secret --name mission-control/openrouter --secret-string "sk-or-..." \
+  --region eu-west-2 --profile talhasandbox              # once; the key never enters git
+cd infra && uv sync
+cdk diff --profile talhasandbox                            # what would be created
+cdk deploy --profile talhasandbox                          # about 15 minutes the first time
+```
+
+The deploy prints `DashboardUrl`. Workers and the ticker report to that URL.
+`cdk destroy --profile talhasandbox` removes everything it made.
+
 ## Layout
 
 ```
@@ -63,5 +83,6 @@ static/         the dashboard
 Dockerfile      one image for every process
 docker-compose.yml  the four processes as containers, for a laptop
 .github/workflows/ci.yml  test on every push; build and publish the image on main
+infra/          the CDK stack: network, cluster, web, workers, ticker
 tests/          run with: make test
 ```

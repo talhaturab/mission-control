@@ -7,3 +7,7 @@ __pycache__
 tests
 docs
 cdk.out
+infra
+.github
+docker-compose.yml
+Makefile
