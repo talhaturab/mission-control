@@ -1,19 +1,19 @@
 """One stack, everything Mission Control needs on AWS.
 
-    cdk deploy --profile talhasandbox
+    cdk deploy MissionControl -c image_tag=<commit sha>
 
 Four kinds of process become three kinds of ECS thing:
   web     an ECS Express service: Fargate task + load balancer + HTTPS URL
   worker  a plain ECS service on Fargate, 2 tasks, autoscaled on CPU
   ticker  a scheduled Fargate task, every 5 minutes, runs once and exits
-The image is built from this repository at deploy time and pushed to ECR by CDK itself.
-Step 5 replaces that with the image the pipeline built.
+The image comes from the ECR repository the pipeline pushes to; `image_tag` says which one.
+A deploy is CloudFormation noticing the tag changed and rolling the services to it.
 """
 
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_applicationautoscaling as appscaling
 from aws_cdk import aws_ec2 as ec2
-from aws_cdk import aws_ecr_assets as ecr_assets
+from aws_cdk import aws_ecr as ecr
 from aws_cdk import aws_ecs as ecs
 from aws_cdk import aws_ecs_patterns as patterns
 from aws_cdk import aws_iam as iam
@@ -42,10 +42,10 @@ class MissionControlStack(Stack):
         )
         public = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
 
-        # --- the image: CDK builds the Dockerfile and pushes it to ECR during deploy --------
-        image = ecr_assets.DockerImageAsset(
-            self, "Image", directory="..", platform=ecr_assets.Platform.LINUX_AMD64
-        )
+        # --- the image: pushed by the pipeline, chosen by tag --------------------------------
+        repository = ecr.Repository.from_repository_name(self, "Repository", "mission-control")
+        image_tag = self.node.get_context("image_tag") or "latest"
+        image = ecs.ContainerImage.from_ecr_repository(repository, image_tag)
 
         # --- the secret, referenced by name; the value stays in Secrets Manager -------------
         openrouter = secretsmanager.Secret.from_secret_name_v2(self, "OpenRouter", SECRET_NAME)
@@ -63,7 +63,7 @@ class MissionControlStack(Stack):
             ],
         )
         openrouter.grant_read(execution_role)
-        image.repository.grant_pull(execution_role)
+        repository.grant_pull(execution_role)
         # Infrastructure role: what Express Mode uses to BUILD the load balancer and certificate.
         infrastructure_role = iam.Role(
             self,
@@ -90,7 +90,7 @@ class MissionControlStack(Stack):
             memory="1024",
             health_check_path="/health",
             primary_container=ecs.CfnExpressGatewayService.ExpressGatewayContainerProperty(
-                image=image.image_uri,
+                image=f"{repository.repository_uri}:{image_tag}",
                 container_port=8000,
                 environment=[
                     ecs.CfnExpressGatewayService.KeyValuePairProperty(name="TASK_NAME", value="aws")
@@ -119,7 +119,7 @@ class MissionControlStack(Stack):
         )
         worker_task.add_container(
             "worker",
-            image=ecs.ContainerImage.from_docker_image_asset(image),
+            image=image,
             command=["python", "-m", "app.worker"],
             environment={"HUB_URL": hub_url},
             secrets={"OPENROUTER_API_KEY": ecs.Secret.from_secrets_manager(openrouter)},
@@ -156,7 +156,7 @@ class MissionControlStack(Stack):
             schedule=appscaling.Schedule.rate(Duration.minutes(5)),
             subnet_selection=public,
             scheduled_fargate_task_image_options=patterns.ScheduledFargateTaskImageOptions(
-                image=ecs.ContainerImage.from_docker_image_asset(image),
+                image=image,
                 command=["python", "-m", "app.ticker"],
                 environment={"HUB_URL": hub_url, "TASK_NAME": "aws"},
                 cpu=256,
@@ -168,3 +168,4 @@ class MissionControlStack(Stack):
         )
 
         CfnOutput(self, "DashboardUrl", value=hub_url)
+        CfnOutput(self, "ImageTag", value=image_tag)

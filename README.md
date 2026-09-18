@@ -41,33 +41,39 @@ Workers reach the web process as `http://web:8000`, by service name, instead of 
 ## Continuous integration (step 3)
 
 `.github/workflows/ci.yml` runs on every push: lint and tests. On `main` it also builds the
-image for `linux/amd64` and pushes it to GitHub's container registry as
-`ghcr.io/talhaturab/mission-control:<commit>` and `:latest`. The registry needs no setup: the
-workflow logs in with the token GitHub gives every run.
+image for `linux/amd64` and pushes it to a registry, tagged with the commit. Until step 5 that
+registry was GitHub's own; now it is ECR.
 
-```bash
-docker pull ghcr.io/talhaturab/mission-control:latest    # the image CI built
-```
+## Infrastructure as code (step 4) and continuous deployment (step 5)
 
-## Infrastructure as code (step 4)
+`infra/` is a CDK app with two stacks.
 
-`infra/` is a CDK app with one stack. It creates a small network, an ECS cluster, the web
-process as an ECS Express service (Fargate behind a load balancer with an HTTPS URL), the
-worker as a Fargate service with two tasks and a CPU autoscaling policy, and the ticker as a
-scheduled Fargate task every five minutes. CDK builds the image from this repository and
-pushes it to ECR itself.
+`Base` is deployed once, by hand: the ECR repository the pipeline pushes to, and an IAM role
+GitHub Actions may assume with no stored key.
+
+`MissionControl` is deployed by the pipeline on every merge to `main`: a small network, an ECS
+cluster, the web process as an ECS Express service (Fargate behind a load balancer with an
+HTTPS URL), the worker as a Fargate service with two tasks and a CPU autoscaling policy, and
+the ticker as a scheduled Fargate task every five minutes. The only input that changes between
+deploys is `image_tag`, the commit the pipeline just built.
+
+One-time setup:
 
 ```bash
 aws sso login --profile talhasandbox
 aws secretsmanager create-secret --name mission-control/openrouter --secret-string "sk-or-..." \
-  --region eu-west-2 --profile talhasandbox              # once; the key never enters git
+  --region eu-west-2 --profile talhasandbox              # the key never enters git
 cd infra && uv sync
-cdk diff --profile talhasandbox                            # what would be created
-cdk deploy --profile talhasandbox                          # about 15 minutes the first time
+cdk deploy Base --profile talhasandbox                     # prints DeployRoleArn
+gh variable set AWS_DEPLOY_ROLE_ARN --body "arn:aws:iam::<account>:role/mission-control-github-deploy"
 ```
 
-The deploy prints `DashboardUrl`. Workers and the ticker report to that URL.
-`cdk destroy --profile talhasandbox` removes everything it made.
+Then merge to `main`. The workflow tests, builds, pushes `mission-control:<commit>` to ECR, runs
+`cdk deploy MissionControl -c image_tag=<commit>`, and curls the dashboard's `/health`. The first
+run creates everything and takes about fifteen minutes; later runs take about eight.
+
+By hand, the same deploy is `cdk deploy MissionControl -c image_tag=<commit> --profile talhasandbox`.
+`cdk destroy MissionControl` removes everything the pipeline made; the images stay in ECR.
 
 ## Layout
 
@@ -82,7 +88,7 @@ app/hub.py      how workers talk to the web process
 static/         the dashboard
 Dockerfile      one image for every process
 docker-compose.yml  the four processes as containers, for a laptop
-.github/workflows/ci.yml  test on every push; build and publish the image on main
-infra/          the CDK stack: network, cluster, web, workers, ticker
+.github/workflows/ci.yml  test on every push; on main, build, push to ECR and cdk deploy
+infra/          two CDK stacks: Base (ECR, deploy role) and MissionControl (everything that runs)
 tests/          run with: make test
 ```

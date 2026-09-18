@@ -4,13 +4,16 @@
   <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker>
   <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker></defs>
   <rect width="900" height="560" fill="#ffffff"/>
-  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 4 · the same four processes, on AWS, from one CDK stack</text>
+  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 5 · a merge to main deploys everything</text>
 
-  <!-- laptop -->
-  <rect x="20" y="50" width="170" height="150" rx="12" fill="#f6f7fb" stroke="#c7cad6" stroke-dasharray="6 5"/>
-  <text x="36" y="72" fill="#666">YOUR LAPTOP</text>
-  <rect x="36" y="86" width="138" height="44" rx="8" fill="#fff" stroke="#333"/><text x="105" y="105" text-anchor="middle" font-weight="bold">cdk deploy</text><text x="105" y="122" text-anchor="middle" fill="#444" font-size="11">infra/stacks/…</text>
-  <text x="105" y="152" text-anchor="middle" fill="#444" font-size="11">builds the image,</text><text x="105" y="167" text-anchor="middle" fill="#444" font-size="11">pushes it to ECR,</text><text x="105" y="182" text-anchor="middle" fill="#444" font-size="11">hands AWS the template</text>
+  <!-- github -->
+  <rect x="20" y="50" width="170" height="150" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-dasharray="6 5"/>
+  <text x="36" y="72" fill="#15803d">GITHUB ACTIONS</text>
+  <text x="105" y="94" text-anchor="middle" fill="#444" font-size="11">on every merge to main:</text>
+  <rect x="36" y="102" width="138" height="22" rx="6" fill="#fff" stroke="#16a34a"/><text x="105" y="117" text-anchor="middle" font-size="11">test</text>
+  <rect x="36" y="128" width="138" height="22" rx="6" fill="#fff" stroke="#16a34a"/><text x="105" y="143" text-anchor="middle" font-size="11">build, push to ECR</text>
+  <rect x="36" y="154" width="138" height="22" rx="6" fill="#fff" stroke="#16a34a"/><text x="105" y="169" text-anchor="middle" font-size="11">cdk deploy</text>
+  <text x="105" y="192" text-anchor="middle" fill="#15803d" font-size="10">signed in by OIDC, no key</text>
 
   <rect x="36" y="224" width="138" height="44" rx="8" fill="#fff" stroke="#333"/><text x="105" y="251" text-anchor="middle">browser</text>
   <path d="M174 246 L228 246 L228 222 L244 222" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#b)"/><text x="105" y="286" text-anchor="middle" fill="#2563eb" font-size="11">https, to the load balancer</text>
@@ -18,10 +21,10 @@
   <!-- AWS -->
   <rect x="210" y="50" width="670" height="450" rx="14" fill="#fff8f0" stroke="#f59e0b" stroke-dasharray="6 5"/>
   <text x="226" y="72" fill="#92400e">AWS · LONDON · ECS CLUSTER "mission-control" · all of it created by the stack</text>
-  <path d="M190 108 L222 108" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M174 139 L228 118" stroke="#16a34a" stroke-width="1.5" marker-end="url(#g)"/>
 
   <!-- ECR + secret -->
-  <rect x="230" y="90" width="150" height="46" rx="8" fill="#fff" stroke="#333"/><text x="305" y="110" text-anchor="middle" font-weight="bold">ECR</text><text x="305" y="128" text-anchor="middle" fill="#444" font-size="11">the image, amd64</text>
+  <rect x="230" y="90" width="150" height="46" rx="8" fill="#fff" stroke="#333"/><text x="305" y="110" text-anchor="middle" font-weight="bold">ECR</text><text x="305" y="128" text-anchor="middle" fill="#444" font-size="10">mission-control:&lt;commit&gt;</text>
   <rect x="400" y="90" width="170" height="46" rx="8" fill="#fff" stroke="#333"/><text x="485" y="110" text-anchor="middle" font-weight="bold">Secrets Manager</text><text x="485" y="128" text-anchor="middle" fill="#444" font-size="11">mission-control/openrouter</text>
   <text x="600" y="106" fill="#444" font-size="11">tasks pull the image and read</text><text x="600" y="122" fill="#444" font-size="11">the key at start, by IAM role</text>
 
@@ -63,5 +66,5 @@
   <path d="M570 400 L614 400" stroke="#d97706" stroke-width="1.5" marker-end="url(#o)"/>
 
   <text x="20" y="526" fill="#666" font-size="11">no server to log in to · public subnets, no NAT · tasks have public IPs for outbound calls · key never in git</text>
-  <text x="20" y="544" fill="#666" font-size="11">deployed by hand from a laptop · next: the pipeline pushes to ECR and runs cdk deploy on every merge</text>
+  <text x="20" y="544" fill="#666" font-size="11">Base stack (ECR, deploy role) by hand once · the rest redeployed on every merge · next: the agent on AgentCore</text>
 </svg>

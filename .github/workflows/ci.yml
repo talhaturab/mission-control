@@ -1,10 +1,10 @@
-# Step 3: every push is tested; every push to main also produces an image.
+# Step 5: merge to main -> test -> build -> push to ECR -> cdk deploy -> the services roll.
 #
 #   push or pull request  ->  test (ruff + pytest)
-#   push to main          ->  test -> build the image -> push it to GitHub's registry (GHCR)
+#   push to main          ->  test -> build the image, push it to ECR -> cdk deploy with that tag
 #
-# The image is tagged with the commit, so any running container can be traced to a commit.
-# Nothing here touches AWS yet. Step 5 replaces the registry with ECR and adds the deploy.
+# No key anywhere: the job proves to AWS that it runs for this repository on main (OIDC)
+# and receives one-hour credentials for the role that the Base stack created.
 name: mission-control
 
 on:
@@ -12,8 +12,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: mission-control-deploy
+  cancel-in-progress: false
+
 env:
-  IMAGE: ghcr.io/${{ github.repository }}
+  AWS_REGION: eu-west-2
+  ECR_REPOSITORY: mission-control        # created by the Base stack
 
 jobs:
   test:
@@ -33,23 +38,68 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write            # lets the job ask GitHub for the token it shows to AWS
       contents: read
-      packages: write          # lets the job push to ghcr.io under this repository
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}   # provided by GitHub; nothing to configure
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64                 # what ECS Fargate runs; laptops may be arm64
+          platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ github.sha }}
-            ${{ env.IMAGE }}:latest
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g aws-cdk
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+
+      # On a normal merge the diff is one line per service: the image tag.
+      - name: cdk diff
+        run: cdk diff MissionControl -c image_tag=${{ needs.build-and-push.outputs.image_tag }} || true
+
+      # CloudFormation rolls each service to the new image and waits for health checks.
+      - name: cdk deploy
+        run: >
+          cdk deploy MissionControl
+          -c image_tag=${{ needs.build-and-push.outputs.image_tag }}
+          --require-approval never
+          --outputs-file outputs.json
+
+      - name: Check the live dashboard
+        run: |
+          url=$(python3 -c "import json; print(json.load(open('outputs.json'))['MissionControl']['DashboardUrl'])")
+          echo "Dashboard: $url"
+          curl -sf "$url/health"
