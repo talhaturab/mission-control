@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # MCP servers the agent may use, as name=url pairs. DeepWiki answers questions about repos.
     mcp_servers: str = "deepwiki=https://mcp.deepwiki.com/mcp"
 
+    # Step 6. When set, the web process sends chat to an AgentCore Runtime instead of running
+    # the agent itself; the runtime reaches its MCP tools through an AgentCore Gateway.
+    agent_runtime_arn: str | None = None
+    gateway_url: str | None = None
+    openrouter_secret_name: str | None = None  # the runtime reads the key from Secrets Manager
+    aws_region: str = "eu-west-2"
+
     # How this process names itself on the dashboard. On ECS the task id is appended.
     task_name: str = os.environ.get("TASK_NAME", socket.gethostname())
 

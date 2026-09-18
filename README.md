@@ -7,7 +7,7 @@ A small application with four kinds of process, built to be deployed step by ste
 | `web` | Serves the dashboard, holds the state, runs the agent | ECS Express service: Fargate behind a load balancer |
 | `worker` | Asks the web process for jobs and does them | ECS service, several copies, autoscaled |
 | `ticker` | Wakes up, posts a one-line report, exits | Scheduled ECS task |
-| the agent | A LangGraph loop over DeepSeek with hub tools and MCP tools | Inside `web`, later on AgentCore |
+| the agent | A LangGraph loop over DeepSeek with hub tools, Wikipedia and MCP tools | AgentCore Runtime, with an AgentCore Gateway in front of its MCP tools |
 
 Each commit on `main` is one step of that journey. Read them in order.
 
@@ -75,6 +75,23 @@ run creates everything and takes about fifteen minutes; later runs take about ei
 By hand, the same deploy is `cdk deploy MissionControl -c image_tag=<commit> --profile talhasandbox`.
 `cdk destroy MissionControl` removes everything the pipeline made; the images stay in ECR.
 
+## The agent on AgentCore (step 6)
+
+On a laptop the agent runs inside the web process. On AWS it is its own process on AgentCore
+Runtime: the same image, started with `python -m app.agentcore`, serving `/invocations` and
+`/ping` on port 8080 (the runtime contract) and built for arm64 (the runtime's hardware).
+
+- Its hub tools call the web process over HTTP, the way a worker does. The web process tells
+  it its own URL in every request, so nothing is hard-wired.
+- Its MCP tools come through an **AgentCore Gateway**: a managed MCP server with the DeepWiki
+  server as a target and IAM as the inbound check. The runtime signs its requests with SigV4
+  (`app/sigv4.py`), and only the runtime's role has `bedrock-agentcore:InvokeGateway`.
+- The OpenRouter key is read from Secrets Manager with the runtime's role. No key in any environment.
+- The web process calls the runtime with `invoke_agent_runtime` and relays the streamed events
+  to the chat box. Its task role has exactly one permission for that.
+
+All of it is in the same stack, so the pipeline deploys it like everything else.
+
 ## Layout
 
 ```
@@ -85,6 +102,8 @@ app/worker.py   the worker loop
 app/ticker.py   the scheduled task
 app/jobs.py     what a worker can do: count_primes, summarise_url
 app/hub.py      how workers talk to the web process
+app/agentcore.py  the agent as an AgentCore Runtime process (step 6)
+app/sigv4.py    signs requests to the AgentCore Gateway
 static/         the dashboard
 Dockerfile      one image for every process
 docker-compose.yml  the four processes as containers, for a laptop

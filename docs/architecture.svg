@@ -4,7 +4,7 @@
   <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d97706"/></marker>
   <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker></defs>
   <rect width="900" height="560" fill="#ffffff"/>
-  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 5 · a merge to main deploys everything</text>
+  <text x="20" y="28" font-size="15" font-weight="bold" fill="#111">Mission Control · step 6 · the agent moves to AgentCore</text>
 
   <!-- github -->
   <rect x="20" y="50" width="170" height="150" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-dasharray="6 5"/>
@@ -32,7 +32,7 @@
   <rect x="230" y="160" width="340" height="150" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.5"/>
   <text x="400" y="182" text-anchor="middle" font-weight="bold">web · ECS Express service</text>
   <rect x="246" y="196" width="140" height="44" rx="6" fill="#fff" stroke="#2563eb"/><text x="316" y="214" text-anchor="middle" font-size="12">load balancer</text><text x="316" y="230" text-anchor="middle" fill="#444" font-size="11">HTTPS · …on.aws</text>
-  <rect x="404" y="196" width="150" height="44" rx="6" fill="#fff" stroke="#2563eb"/><text x="479" y="214" text-anchor="middle" font-size="12">Fargate task</text><text x="479" y="230" text-anchor="middle" fill="#444" font-size="10">dashboard · API · agent</text>
+  <rect x="404" y="196" width="150" height="44" rx="6" fill="#fff" stroke="#2563eb"/><text x="479" y="214" text-anchor="middle" font-size="12">Fargate task</text><text x="479" y="230" text-anchor="middle" fill="#444" font-size="10">dashboard · API · relay to agent</text>
   <path d="M386 218 L402 218" stroke="#2563eb" stroke-width="1.5" marker-end="url(#b)"/>
   <text x="400" y="266" text-anchor="middle" fill="#444" font-size="11">state: still in memory, in this one task</text>
   <text x="400" y="284" text-anchor="middle" fill="#444" font-size="11">scaling: 1 to 2 tasks · health check GET /health</text>
@@ -56,15 +56,21 @@
   <text x="730" y="256" text-anchor="middle" fill="#444" font-size="11">every 5 min: start, report, exit</text>
   <path d="M600 230 L572 222" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 
-  <!-- internet -->
-  <rect x="600" y="300" width="260" height="180" rx="10" fill="#fafafa" stroke="#c7cad6"/>
-  <text x="616" y="322" fill="#666">THE INTERNET</text>
-  <rect x="616" y="336" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="358" text-anchor="middle" font-size="11">OpenRouter · deepseek-v4.1-flash</text>
-  <rect x="616" y="382" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="404" text-anchor="middle" font-size="12">DeepWiki MCP · Wikipedia API</text>
-  <rect x="616" y="428" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="450" text-anchor="middle" font-size="12">web pages a worker fetches</text>
-  <path d="M570 240 C 590 290, 590 330, 614 350" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#b)"/>
-  <path d="M570 400 L614 400" stroke="#d97706" stroke-width="1.5" marker-end="url(#o)"/>
+  <!-- agentcore -->
+  <rect x="600" y="290" width="260" height="110" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+  <text x="730" y="312" text-anchor="middle" font-weight="bold">agent · AgentCore</text>
+  <rect x="616" y="324" width="110" height="36" rx="6" fill="#fff" stroke="#059669"/><text x="671" y="340" text-anchor="middle" font-size="11">Runtime</text><text x="671" y="353" text-anchor="middle" fill="#444" font-size="9">same image, arm64</text>
+  <rect x="740" y="324" width="104" height="36" rx="6" fill="#fff" stroke="#059669"/><text x="792" y="340" text-anchor="middle" font-size="11">Gateway</text><text x="792" y="353" text-anchor="middle" fill="#444" font-size="9">MCP, IAM in front</text>
+  <path d="M726 342 L738 342" stroke="#059669" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="730" y="384" text-anchor="middle" fill="#444" font-size="11">web calls it; it calls the hub over HTTP</text>
+  <path d="M570 230 C 600 250, 600 300, 616 330" stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#b)"/>
 
-  <text x="20" y="526" fill="#666" font-size="11">no server to log in to · public subnets, no NAT · tasks have public IPs for outbound calls · key never in git</text>
-  <text x="20" y="544" fill="#666" font-size="11">Base stack (ECR, deploy role) by hand once · the rest redeployed on every merge · next: the agent on AgentCore</text>
+  <!-- internet -->
+  <rect x="600" y="412" width="260" height="76" rx="10" fill="#fafafa" stroke="#c7cad6"/>
+  <text x="616" y="432" fill="#666" font-size="11">THE INTERNET</text>
+  <rect x="616" y="442" width="228" height="36" rx="6" fill="#fff" stroke="#333"/><text x="730" y="457" text-anchor="middle" font-size="10">OpenRouter · Wikipedia · web pages</text><text x="730" y="471" text-anchor="middle" fill="#444" font-size="9">DeepWiki MCP, behind the gateway</text>
+  <path d="M792 360 L792 440" stroke="#059669" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M570 400 L614 450" stroke="#d97706" stroke-width="1.5" marker-end="url(#o)"/>
+  <text x="20" y="526" fill="#666" font-size="11">the agent is its own process now: runtime hosts it, gateway guards its tools, its role reads the key · no key anywhere</text>
+  <text x="20" y="544" fill="#666" font-size="11">Base stack by hand once · everything else, agent included, redeployed on every merge · done</text>
 </svg>

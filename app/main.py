@@ -11,6 +11,7 @@ Endpoints:
   POST /api/jobs/claim        a worker asks for the next queued job
   POST /api/jobs/{id}/result  a worker reports the outcome
   POST /api/chat/stream       talk to the agent; tokens stream back as server-sent events
+                              (step 6: forwarded to the agent on AgentCore Runtime)
 """
 
 import asyncio
@@ -22,6 +23,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 
+import boto3
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -151,6 +153,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/chat/stream")
     async def chat_stream(body: Chat, request: Request) -> StreamingResponse:
+        if settings.agent_runtime_arn:
+            return StreamingResponse(
+                relay_to_runtime(settings, body, hub_url=f"https://{request.headers['host']}"),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache"},
+            )
         graph = request.app.state.graph
         if graph is None:
             raise HTTPException(503, "OPENROUTER_API_KEY is not set")
@@ -188,6 +196,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 def sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+async def relay_to_runtime(settings: Settings, body: Chat, hub_url: str) -> AsyncIterator[str]:
+    """Step 6: the agent lives on AgentCore Runtime. Send the prompt, pass its events through.
+
+    The runtime is told where the hub is, because it runs outside this process and reaches the
+    tasks and jobs over HTTP like a worker does. Sessions must be at least 33 characters.
+    """
+    client = boto3.client("bedrock-agentcore", region_name=settings.aws_region)
+    session_id = (body.session_id + "-mission-control-session").ljust(33, "x")
+    try:
+        response = await asyncio.to_thread(
+            client.invoke_agent_runtime,
+            agentRuntimeArn=settings.agent_runtime_arn,
+            runtimeSessionId=session_id,
+            payload=json.dumps({"prompt": body.message, "hub_url": hub_url}).encode(),
+        )
+        # The runtime streams "data: {...}" lines; each one is an event dict from app/agentcore.py.
+        for raw in response["response"].iter_lines():
+            line = raw.decode() if isinstance(raw, bytes) else raw
+            if not line.startswith("data:"):
+                continue
+            event = json.loads(line[5:].strip())
+            yield sse(event.pop("event"), event)
+    except Exception as exc:  # noqa: BLE001 - report any failure to the browser
+        yield sse("error", {"detail": f"{type(exc).__name__}: {exc}"})
 
 
 app = create_app()

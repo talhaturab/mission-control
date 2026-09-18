@@ -1,4 +1,5 @@
 # Step 5: merge to main -> test -> build -> push to ECR -> cdk deploy -> the services roll.
+# Step 6: the same image is also built for arm64, because AgentCore Runtime runs the agent on it.
 #
 #   push or pull request  ->  test (ruff + pytest)
 #   push to main          ->  test -> build the image, push it to ECR -> cdk deploy with that tag
@@ -56,7 +57,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64   # ECS runs amd64; AgentCore Runtime runs arm64
           push: true
           tags: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.tag }}
           cache-from: type=gha

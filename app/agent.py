@@ -114,12 +114,53 @@ def wikipedia_tools() -> list:
     return [search_wikipedia, wikipedia_summary]
 
 
-async def mcp_tools(servers: dict[str, str]) -> list:
-    """Connect to each MCP server and fetch its tool list. A server that is down is skipped."""
+def hub_tools_http(hub_url: str) -> list:
+    """The same three hub tools, over HTTP. Used when the agent runs outside the web process."""
+    client = httpx.Client(base_url=hub_url, timeout=15)
+
+    @tool
+    def list_tasks() -> str:
+        """List the tasks that are running right now, and how many jobs are queued or running."""
+        tasks = client.get("/api/tasks").json()
+        counts = client.get("/api/summary").json()
+        rows = [
+            f"{t['kind']} {t['name']}: {'alive' if t['alive'] else 'gone'}, "
+            f"{t['status'] or '-'}, {t['note']}"
+            for t in tasks
+        ]
+        return ("\n".join(rows) or "no tasks have reported yet") + f"\njobs: {counts}"
+
+    @tool
+    def submit_job(kind: str, input: str) -> str:
+        """Queue a job. kind: 'count_primes' (input: a number) or 'summarise_url' (input: a URL)."""
+        job = client.post("/api/jobs", json={"kind": kind, "input": input}).json()
+        return f"queued job {job['id']} ({kind})"
+
+    @tool
+    def list_jobs() -> str:
+        """List recent jobs, newest first: id, kind, status, worker, and the result if any."""
+        rows = [
+            f"{j['id']} {j['kind']} {j['status']} worker={j['worker']} "
+            f"result={(j['result'] or '')[:200]}"
+            for j in client.get("/api/jobs").json()[:20]
+        ]
+        return "\n".join(rows) or "no jobs yet"
+
+    return [list_tasks, submit_job, list_jobs]
+
+
+async def mcp_tools(servers: dict[str, str], auth=None) -> list:
+    """Connect to each MCP server and fetch its tool list. A server that is down is skipped.
+
+    `auth` is an httpx auth object; the AgentCore Gateway wants requests signed with SigV4.
+    """
     if not servers:
         return []
     client = MultiServerMCPClient(
-        {name: {"url": url, "transport": "streamable_http"} for name, url in servers.items()}
+        {
+            name: {"url": url, "transport": "streamable_http", "auth": auth}
+            for name, url in servers.items()
+        }
     )
     try:
         tools = await client.get_tools()

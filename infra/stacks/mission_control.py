@@ -6,12 +6,16 @@ Four kinds of process become three kinds of ECS thing:
   web     an ECS Express service: Fargate task + load balancer + HTTPS URL
   worker  a plain ECS service on Fargate, 2 tasks, autoscaled on CPU
   ticker  a scheduled Fargate task, every 5 minutes, runs once and exits
+Step 6 adds the agent as a fifth thing, outside ECS:
+  agent   an AgentCore Runtime running the same image (arm64) with `python -m app.agentcore`,
+          reaching its MCP tools through an AgentCore Gateway
 The image comes from the ECR repository the pipeline pushes to; `image_tag` says which one.
 A deploy is CloudFormation noticing the tag changed and rolling the services to it.
 """
 
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_applicationautoscaling as appscaling
+from aws_cdk import aws_bedrockagentcore as agentcore
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecr as ecr
 from aws_cdk import aws_ecs as ecs
@@ -78,6 +82,123 @@ class MissionControlStack(Stack):
 
         cluster = ecs.Cluster(self, "Cluster", vpc=vpc, cluster_name="mission-control")
 
+        # --- step 6: the agent on AgentCore --------------------------------------------------
+        # A gateway is an MCP server AWS runs for you. Behind it, "targets": here the public
+        # DeepWiki MCP server. In front of it, inbound auth: only IAM identities we allow.
+        gateway_role = iam.Role(
+            self, "GatewayRole", assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com")
+        )
+        gateway = agentcore.CfnGateway(
+            self,
+            "Gateway",
+            name="mission-control",
+            protocol_type="MCP",
+            authorizer_type="AWS_IAM",
+            role_arn=gateway_role.role_arn,
+        )
+        agentcore.CfnGatewayTarget(
+            self,
+            "DeepWikiTarget",
+            name="deepwiki",
+            gateway_identifier=gateway.attr_gateway_identifier,
+            target_configuration=agentcore.CfnGatewayTarget.TargetConfigurationProperty(
+                mcp=agentcore.CfnGatewayTarget.McpTargetConfigurationProperty(
+                    mcp_server=agentcore.CfnGatewayTarget.McpServerTargetConfigurationProperty(
+                        endpoint="https://mcp.deepwiki.com/mcp"
+                    )
+                )
+            ),
+        )
+
+        # The runtime's role: pull the image, write logs, read the key, call the gateway.
+        runtime_role = iam.Role(
+            self,
+            "AgentRuntimeRole",
+            assumed_by=iam.ServicePrincipal("bedrock-agentcore.amazonaws.com"),
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"],
+                resources=[repository.repository_arn],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(actions=["ecr:GetAuthorizationToken"], resources=["*"])
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams",
+                ],
+                resources=[f"arn:aws:logs:{self.region}:{self.account}:log-group:*"],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["xray:PutTraceSegments", "xray:PutTelemetryRecords"], resources=["*"]
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["cloudwatch:PutMetricData"],
+                resources=["*"],
+                conditions={"StringEquals": {"cloudwatch:namespace": "bedrock-agentcore"}},
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["bedrock-agentcore:GetWorkloadAccessToken"],
+                resources=[
+                    f"arn:aws:bedrock-agentcore:{self.region}:{self.account}:workload-identity-directory/default",
+                    f"arn:aws:bedrock-agentcore:{self.region}:{self.account}:workload-identity-directory/default/workload-identity/*",
+                ],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["bedrock-agentcore:InvokeGateway"], resources=[gateway.attr_gateway_arn]
+            )
+        )
+        openrouter.grant_read(runtime_role)
+
+        # The runtime: our image, the agentcore entrypoint, port 8080, arm64.
+        runtime = agentcore.CfnRuntime(
+            self,
+            "AgentRuntime",
+            agent_runtime_name="mission_control_agent",
+            role_arn=runtime_role.role_arn,
+            agent_runtime_artifact=agentcore.CfnRuntime.AgentRuntimeArtifactProperty(
+                container_configuration=agentcore.CfnRuntime.ContainerConfigurationProperty(
+                    container_uri=f"{repository.repository_uri}:{image_tag}"
+                )
+            ),
+            network_configuration=agentcore.CfnRuntime.NetworkConfigurationProperty(
+                network_mode="PUBLIC"
+            ),
+            protocol_configuration="HTTP",
+            environment_variables={
+                "GATEWAY_URL": gateway.attr_gateway_url,
+                "OPENROUTER_SECRET_NAME": SECRET_NAME,
+                "AWS_REGION": self.region,
+            },
+        )
+        runtime.node.add_dependency(runtime_role)
+
+        # The web process calls the runtime; that needs a task role with one permission.
+        web_task_role = iam.Role(
+            self, "WebTaskRole", assumed_by=iam.ServicePrincipal("ecs-tasks.amazonaws.com")
+        )
+        web_task_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["bedrock-agentcore:InvokeAgentRuntime"],
+                resources=[runtime.attr_agent_runtime_arn, f"{runtime.attr_agent_runtime_arn}/*"],
+            )
+        )
+
         # --- web: Express Mode gives us the load balancer and the HTTPS URL ------------------
         web = ecs.CfnExpressGatewayService(
             self,
@@ -86,6 +207,7 @@ class MissionControlStack(Stack):
             cluster=cluster.cluster_name,
             execution_role_arn=execution_role.role_arn,
             infrastructure_role_arn=infrastructure_role.role_arn,
+            task_role_arn=web_task_role.role_arn,
             cpu="512",
             memory="1024",
             health_check_path="/health",
@@ -93,7 +215,12 @@ class MissionControlStack(Stack):
                 image=f"{repository.repository_uri}:{image_tag}",
                 container_port=8000,
                 environment=[
-                    ecs.CfnExpressGatewayService.KeyValuePairProperty(name="TASK_NAME", value="aws")
+                    ecs.CfnExpressGatewayService.KeyValuePairProperty(
+                        name="TASK_NAME", value="aws"
+                    ),
+                    ecs.CfnExpressGatewayService.KeyValuePairProperty(
+                        name="AGENT_RUNTIME_ARN", value=runtime.attr_agent_runtime_arn
+                    ),
                 ],
                 secrets=[
                     ecs.CfnExpressGatewayService.SecretProperty(
@@ -169,3 +296,5 @@ class MissionControlStack(Stack):
 
         CfnOutput(self, "DashboardUrl", value=hub_url)
         CfnOutput(self, "ImageTag", value=image_tag)
+        CfnOutput(self, "AgentRuntimeArn", value=runtime.attr_agent_runtime_arn)
+        CfnOutput(self, "GatewayUrl", value=gateway.attr_gateway_url)
