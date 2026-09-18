@@ -38,6 +38,17 @@ One image, built from the `Dockerfile`, runs all four processes; the `command` i
 `docker-compose.yml` decides which one each container is. The dashboard is on http://localhost:8010.
 Workers reach the web process as `http://web:8000`, by service name, instead of `localhost`.
 
+## Continuous integration (step 3)
+
+`.github/workflows/ci.yml` runs on every push: lint and tests. On `main` it also builds the
+image for `linux/amd64` and pushes it to GitHub's container registry as
+`ghcr.io/talhaturab/mission-control:<commit>` and `:latest`. The registry needs no setup: the
+workflow logs in with the token GitHub gives every run.
+
+```bash
+docker pull ghcr.io/talhaturab/mission-control:latest    # the image CI built
+```
+
 ## Layout
 
 ```
@@ -51,5 +62,6 @@ app/hub.py      how workers talk to the web process
 static/         the dashboard
 Dockerfile      one image for every process
 docker-compose.yml  the four processes as containers, for a laptop
+.github/workflows/ci.yml  test on every push; build and publish the image on main
 tests/          run with: make test
 ```

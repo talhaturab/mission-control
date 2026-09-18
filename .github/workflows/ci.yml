@@ -1,0 +1,55 @@
+# Step 3: every push is tested; every push to main also produces an image.
+#
+#   push or pull request  ->  test (ruff + pytest)
+#   push to main          ->  test -> build the image -> push it to GitHub's registry (GHCR)
+#
+# The image is tagged with the commit, so any running container can be traced to a commit.
+# Nothing here touches AWS yet. Step 5 replaces the registry with ECR and adds the deploy.
+name: mission-control
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  build-and-push:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # lets the job push to ghcr.io under this repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # provided by GitHub; nothing to configure
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64                 # what ECS Fargate runs; laptops may be arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
